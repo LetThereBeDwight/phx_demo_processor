@@ -31,9 +31,10 @@ defmodule PhxDemoProcessor.MessageHandlerTest do
 
     test "Simple Single Queue Rate Limiting" do
       range = 1..5
-      monitor_ref = spawn(fn -> monitor_processing(%{"TestHandlerQueueRate" => Enum.count(range)}) end) |>
-                    Process.monitor()
+      monitor_ref = spawn(fn -> monitor_processing(%{"TestHandlerQueueRate" => Enum.count(range)}) end)
+                    |> Process.monitor()
 
+      Process.sleep(100) # Give us some time to start the process trace
       for i <- range do
         assert :ok == MessageHandler.receive_message("TestHandlerQueueRate", "TestMessage_#{i}")
       end
@@ -42,12 +43,13 @@ defmodule PhxDemoProcessor.MessageHandlerTest do
     end
 
     test "Simple Multiple Queue Rate Limiting" do
-      range_one = 100..105
-      range_two = 200..210
+      range_one = 101..105
+      range_two = 201..210
       monitor_ref = spawn(fn -> monitor_processing(%{"TestHandlerQueueRateOne" => Enum.count(range_one),
-                                                     "TestHandlerQueueRateTwo" => Enum.count(range_two)}) end) |>
-                    Process.monitor()
+                                                     "TestHandlerQueueRateTwo" => Enum.count(range_two)}) end)
+                    |> Process.monitor()
 
+      Process.sleep(100) # Give us some time to start the process trace
       spawn(fn ->
         for i <- range_one do
           assert :ok == MessageHandler.receive_message("TestHandlerQueueRateOne", "TestMessage_#{i}")

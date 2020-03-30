@@ -36,10 +36,21 @@ defmodule PhxDemoProcessor.MessageHandler do
     case :queue.out(Map.get(state, queue_name)) do
       {{:value, message}, q} ->
         spawn(fn -> process_message(message) end)
-        Process.send_after(self(), {:process_queue, queue_name}, message_processing_rate())
+        if :queue.is_empty(q) do
+          Process.send_after(self(), {:empty_queue, queue_name}, message_processing_rate())
+        else
+          Process.send_after(self(), {:process_queue, queue_name}, message_processing_rate())
+        end
         {:noreply, Map.put(state, queue_name, q)}
-      {:empty, _} ->
-        {:noreply, Map.delete(state, queue_name)}
+    end
+  end
+
+  def handle_info({:empty_queue, queue_name}, state) do
+    if :queue.is_empty(Map.get(state, queue_name)) do
+      {:noreply, Map.delete(state, queue_name)}
+    else
+      send(self(), {:process_queue, queue_name})
+      {:noreply, state}
     end
   end
 
