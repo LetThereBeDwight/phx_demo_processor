@@ -9,8 +9,10 @@ defmodule PhxDemoProcessorWeb.MessageController do
   end
 
   def index(conn, _params) do
-    #FIXME: This should error out
-    text(conn, "Wrong Parameters!")
+    #FIXME: Better error handling
+    conn
+    |> put_status(400)
+    |> text("Wrong Parameters!")
   end
 
 end

@@ -2,7 +2,7 @@ defmodule PhxDemoProcessorWeb.MessageControllerTest do
   use PhxDemoProcessorWeb.ConnCase
 
   describe "index/2" do
-    test "Controller sends a message and gets a 200 text reponse", %{conn: conn} do
+    test "Controller sends a valid message and gets a 200 text reponse", %{conn: conn} do
       response =
         conn
         |> get(Routes.message_path(conn, :index, %{:queue => "TestQueue",
@@ -10,6 +10,15 @@ defmodule PhxDemoProcessorWeb.MessageControllerTest do
         |> text_response(200)
 
       assert response == "Queue TestQueue Message TestMessage"
+    end
+
+    test "Controller sends an invalid message and gets a 400 text reponse", %{conn: conn} do
+      response =
+        conn
+        |> get(Routes.message_path(conn, :index))
+        |> text_response(400)
+
+      assert response == "Wrong Parameters!"
     end
   end
 
