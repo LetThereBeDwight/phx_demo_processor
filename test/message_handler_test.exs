@@ -25,12 +25,15 @@ defmodule PhxDemoProcessor.MessageHandlerTest do
     end
 
     test "Simple Single Queue Rate Limiting" do
+      monitor_ref = spawn(fn -> monitor_processing(5, "TestHandlerQueue") end) |>
+                    Process.monitor()
+
       range = 0..4
       for i <- range do
         assert :ok == MessageHandler.receive_message("TestHandlerQueue", "TestMessage_#{i}")
       end
 
-      monitor_processing(5, "TestHandlerQueue")
+      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 6000)
     end
   end
 end
