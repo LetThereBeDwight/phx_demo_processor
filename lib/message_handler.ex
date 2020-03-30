@@ -17,6 +17,8 @@ defmodule PhxDemoProcessor.MessageHandler do
     :ok
   end
 
+  defp process_message(message), do: IO.puts(message)
+
   def handle_cast({:receive_message, queue_name, message}, state) do
     if Map.has_key?(state, queue_name) do
       q = Map.get(state, queue_name)
@@ -33,7 +35,7 @@ defmodule PhxDemoProcessor.MessageHandler do
       Map.get(state, queue_name) |>
       :queue.out()
 
-    IO.puts(message)
+    spawn(fn -> process_message(message) end)
 
     if :queue.is_empty(q) do
       {:noreply, Map.delete(state, queue_name)}
