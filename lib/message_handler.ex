@@ -1,6 +1,8 @@
 defmodule PhxDemoProcessor.MessageHandler do
   use GenServer
 
+  def message_processing_rate, do: System.get_env("MSG_PROCESS_RATE", "1000") |> Integer.parse |> Tuple.to_list |> List.first# Limit Message Rate to 1 per second
+
   def start_link(opts \\ [name: __MODULE__]) do
     GenServer.start_link(__MODULE__, %{}, Keyword.put_new(opts, :name, __MODULE__))
   end
@@ -11,10 +13,6 @@ defmodule PhxDemoProcessor.MessageHandler do
 
   def receive_message(queue_name, message, pid \\ __MODULE__) do
     GenServer.cast(pid, {:receive_message, queue_name, message})
-  end
-
-  def get_queue(name) do
-    :ok
   end
 
   defp process_message(message), do: IO.puts(message)
@@ -29,7 +27,7 @@ defmodule PhxDemoProcessor.MessageHandler do
       # If we don't want to process the first message immediately,
       # use Process.send_after
       send(self(), {:process_queue, queue_name})
-      q = :queue.new
+      q = :queue.new()
       {:noreply, Map.put(state, queue_name, :queue.in(message, q))}
     end
   end
@@ -38,7 +36,7 @@ defmodule PhxDemoProcessor.MessageHandler do
     case :queue.out(Map.get(state, queue_name)) do
       {{:value, message}, q} ->
         spawn(fn -> process_message(message) end)
-        Process.send_after(self(), {:process_queue, queue_name}, 1000)
+        Process.send_after(self(), {:process_queue, queue_name}, message_processing_rate())
         {:noreply, Map.put(state, queue_name, q)}
       {:empty, _} ->
         {:noreply, Map.delete(state, queue_name)}
