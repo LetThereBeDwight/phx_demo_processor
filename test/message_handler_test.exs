@@ -8,13 +8,13 @@ defmodule PhxDemoProcessor.MessageHandlerTest do
 
     {counts, process_times} =
       receive do
-        {:trace, ^handler_pid, :receive, {:process_queue, queue_name}} when :erlang.is_map_key(queue_name, counts)->
+        {:trace, ^handler_pid, :receive, {:process_queue, queue_name}} when :erlang.is_map_key(queue_name, counts) ->
           time = System.monotonic_time(:millisecond)
           if Map.has_key?(last_processing_times, queue_name) do
             assert time - Map.get(last_processing_times, queue_name) >= 1000
           end
 
-          { Map.put(counts, queue_name, Kernel.max(Map.get(counts, queue_name) - 1, 0)),
+          { Map.put(counts, queue_name, Map.get(counts, queue_name) - 1),
             Map.put(last_processing_times, queue_name, time) }
       end
 
