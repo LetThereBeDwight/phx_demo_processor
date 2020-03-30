@@ -8,4 +8,8 @@ defmodule PhxDemoProcessorWeb.Router do
   scope "/api", PhxDemoProcessorWeb do
     pipe_through :api
   end
+
+  scope "/", PhxDemoProcessorWeb do
+    get "/receive-message", MessageController, :index
+  end
 end
