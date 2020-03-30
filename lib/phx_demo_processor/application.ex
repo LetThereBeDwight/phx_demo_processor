@@ -9,7 +9,8 @@ defmodule PhxDemoProcessor.Application do
     # List all child processes to be supervised
     children = [
       # Start the endpoint when the application starts
-      PhxDemoProcessorWeb.Endpoint
+      PhxDemoProcessorWeb.Endpoint,
+      PhxDemoProcessor.MessageHandler
       # Starts a worker by calling: PhxDemoProcessor.Worker.start_link(arg)
       # {PhxDemoProcessor.Worker, arg},
     ]
