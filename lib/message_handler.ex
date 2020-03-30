@@ -24,24 +24,24 @@ defmodule PhxDemoProcessor.MessageHandler do
       q = Map.get(state, queue_name)
       {:noreply, Map.put(state, queue_name, :queue.in(message, q))}
     else
-      Process.send_after(self(), {:process_queue, queue_name}, 1000)
+      # Assuming the first message can be immediately processed,
+      # We can handle rate limiting through the queue processor.
+      # If we don't want to process the first message immediately,
+      # use Process.send_after
+      send(self(), {:process_queue, queue_name})
       q = :queue.new
       {:noreply, Map.put(state, queue_name, :queue.in(message, q))}
     end
   end
 
   def handle_info({:process_queue, queue_name}, state) do
-    {{:value, message}, q} =
-      Map.get(state, queue_name) |>
-      :queue.out()
-
-    spawn(fn -> process_message(message) end)
-
-    if :queue.is_empty(q) do
-      {:noreply, Map.delete(state, queue_name)}
-    else
-      Process.send_after(self(), {:process_queue, queue_name}, 1000)
-      {:noreply, Map.put(state, queue_name, q)}
+    case :queue.out(Map.get(state, queue_name)) do
+      {{:value, message}, q} ->
+        spawn(fn -> process_message(message) end)
+        Process.send_after(self(), {:process_queue, queue_name}, 1000)
+        {:noreply, Map.put(state, queue_name, q)}
+      {:empty, _} ->
+        {:noreply, Map.delete(state, queue_name)}
     end
   end
 
