@@ -1,9 +1,36 @@
 defmodule PhxDemoProcessor.MessageHandlerTest do
   use ExUnit.Case
+  alias PhxDemoProcessor.MessageHandler
 
-  describe "Test Message Handling" do
-    test "Smoke" do
-      assert true
+  defp monitor_processing(count, queue_name, last_processing_time \\ nil) do
+    handler_pid = Process.whereis(MessageHandler)
+    :erlang.trace(handler_pid, true, [:receive])
+
+    process_time =
+      receive do
+        {:trace, ^handler_pid, :receive, {:process_queue, ^queue_name}} ->
+          time = System.monotonic_time(:millisecond)
+          if last_processing_time, do: assert time - last_processing_time >= 1000
+          time
+      end
+
+    if count > 1 do
+      monitor_processing(count - 1, queue_name, process_time)
+    end
+  end
+
+  describe "Test Message Handling Genserver" do
+    test "Single Message" do
+      assert :ok == MessageHandler.receive_message("TestHandlerQueue", "TestMessageHandler")
+    end
+
+    test "Simple Single Queue Rate Limiting" do
+      range = 0..4
+      for i <- range do
+        assert :ok == MessageHandler.receive_message("TestHandlerQueue", "TestMessage_#{i}")
+      end
+
+      monitor_processing(5, "TestHandlerQueue")
     end
   end
 end

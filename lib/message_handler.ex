@@ -11,8 +11,8 @@ defmodule PhxDemoProcessor.MessageHandler do
     {:ok, state}
   end
 
-  def receive_message(queue_name, message, pid \\ __MODULE__) do
-    GenServer.cast(pid, {:receive_message, queue_name, message})
+  def receive_message(queue_name, message, server_pid \\ __MODULE__) do
+    GenServer.cast(server_pid, {:receive_message, queue_name, message})
   end
 
   defp process_message(message), do: IO.puts(message)
