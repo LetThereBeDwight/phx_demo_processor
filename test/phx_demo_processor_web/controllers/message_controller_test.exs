@@ -28,7 +28,8 @@ defmodule PhxDemoProcessorWeb.MessageControllerTest do
         assert response == "Queue TestControllerQueueRate Message TestMessageControllerRate_#{i}"
       end
 
-      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 6000)
+      refute_receive({:DOWN, ^monitor_ref, _, _, _}, 4000)
+      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 2000)
     end
 
     test "Controller sends an overloaded valid message and gets a 200 text reponse", %{conn: conn} do
