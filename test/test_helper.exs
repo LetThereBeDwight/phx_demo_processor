@@ -2,7 +2,8 @@ ExUnit.start()
 
 defmodule PhxDemoProcessor.MonitorProcessHelper do
   import ExUnit.Assertions
-  def monitor_processing(counts, last_processing_times \\ Map.new()) do
+
+  def monitor_processing_rate(counts, last_processing_times \\ Map.new()) do
     handler_pid = Process.whereis(PhxDemoProcessor.MessageHandler)
     :erlang.trace(handler_pid, true, [:receive])
 
@@ -20,7 +21,8 @@ defmodule PhxDemoProcessor.MonitorProcessHelper do
 
     still_counting = Enum.reduce(counts, 0, fn {_k, v}, acc -> v + acc end)
     if still_counting > 0 do
-      monitor_processing(counts, process_times)
+      monitor_processing_rate(counts, process_times)
     end
   end
+
 end
