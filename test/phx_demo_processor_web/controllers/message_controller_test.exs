@@ -15,7 +15,7 @@ defmodule PhxDemoProcessorWeb.MessageControllerTest do
 
     test "Controller sends multiple valid messages, gets a 200 text reponse, processes rate limited", %{conn: conn} do
       range = 1..5
-      monitor_ref = spawn(fn -> monitor_processing(%{"TestControllerQueueRate" => Enum.count(range)}) end)
+      monitor_ref = spawn_link(fn -> monitor_processing(%{"TestControllerQueueRate" => Enum.count(range)}) end)
                     |> Process.monitor()
 
       Process.sleep(100) # Give us some time to start the process trace
