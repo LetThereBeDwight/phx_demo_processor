@@ -18,7 +18,8 @@ defmodule PhxDemoProcessor.MessageHandlerTest do
         assert :ok == MessageHandler.receive_message("TestHandlerQueueRate", "TestMessage_#{i}")
       end
 
-      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 6000)
+      refute_receive({:DOWN, ^monitor_ref, _, _, _}, 4000)
+      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 2000)
     end
 
     test "Simple Multiple Queue Rate Limiting" do
@@ -41,7 +42,8 @@ defmodule PhxDemoProcessor.MessageHandlerTest do
         end
       end)
 
-      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 12000)
+      refute_receive({:DOWN, ^monitor_ref, _, _, _}, 8000)
+      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 2000)
     end
 
   end

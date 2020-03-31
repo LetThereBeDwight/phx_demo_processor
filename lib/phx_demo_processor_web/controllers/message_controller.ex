@@ -4,8 +4,15 @@ defmodule PhxDemoProcessorWeb.MessageController do
   alias PhxDemoProcessor.MessageHandler
 
   def index(conn, %{"queue" => queue, "message" => message}) do
-    spawn(fn -> MessageHandler.receive_message(queue, message) end)
-    text(conn, "Queue #{queue} Message #{message}")
+    case MessageHandler.receive_message(queue, message) do
+      :ok ->
+        text(conn, "Queue #{queue} Message #{message}")
+      error ->
+        conn
+        |> put_status(400)
+        |> text("Genersever API Error! #{inspect(error)}")
+    end
+
   end
 
   def index(conn, _params) do
