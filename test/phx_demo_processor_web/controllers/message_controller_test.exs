@@ -1,72 +1,66 @@
 defmodule PhxDemoProcessorWeb.MessageControllerTest do
   use PhxDemoProcessorWeb.ConnCase
-  import PhxDemoProcessor.MonitorProcessHelper, only: [monitor_processing_rate: 1]
-  alias PhxDemoProcessor.MessageHandler
+  import PhxDemoProcessor.MonitorProcessHelper, only: [monitor_queue_processing: 2]
 
   describe "index/2" do
     test "Controller sends a single valid message and gets a 200 text reponse", %{conn: conn} do
-      MessageHandler.start_listen_to_message_processes(self())
       queue_name = Kernel.inspect(make_ref())
+      message = Kernel.inspect(make_ref())
+      monitor_ref = spawn_link(fn -> monitor_queue_processing(queue_name, [message]) end)
+                    |> Process.monitor()
+
+      Process.sleep(100) # Give us some time to start the process link
       response =
         conn
         |> get(Routes.message_path(conn, :index, %{:queue => queue_name,
-                                                   :message => "TestSingleControllerMessage"}))
+                                                   :message => message}))
         |> text_response(200)
 
-      assert response == "Queue #{queue_name} Message TestSingleControllerMessage"
-
-      receive do
-        {:processing_message, ^queue_name, message} ->
-          assert message == "TestSingleControllerMessage"
-      end
-      MessageHandler.stop_listen_to_message_processes(self())
+      assert response == "Queue #{queue_name} Message #{message}"
+      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 10)
     end
 
     test "Controller sends multiple valid messages, gets a 200 text reponse, processes rate limited", %{conn: conn} do
-      MessageHandler.start_listen_to_message_processes(self())
       queue_name = Kernel.inspect(make_ref())
       range = 1..5
+      messages =
+        Enum.reduce(range, [], fn _i, acc ->
+          [Kernel.inspect(make_ref()) | acc]
+        end)
 
-      monitor_ref = spawn_link(fn -> monitor_processing_rate(%{queue_name => Enum.count(range)}) end)
+      monitor_ref = spawn_link(fn -> monitor_queue_processing(queue_name, messages) end)
                     |> Process.monitor()
 
-      Process.sleep(100) # Give us some time to start the process trace
-      for i <- range do
+      Process.sleep(100) # Give us some time to start the process link
+      Enum.each(messages, fn message ->
         response =
           conn
           |> get(Routes.message_path(conn, :index, %{:queue => queue_name,
-                                                     :message => "TestMessageControllerRate_#{i}"}))
+                                                     :message => message}))
           |> text_response(200)
 
-        assert response == "Queue #{queue_name} Message TestMessageControllerRate_#{i}"
-      end
+        assert response == "Queue #{queue_name} Message #{message}"
+      end)
 
-      for i <- range do
-        receive do
-          {:processing_message, ^queue_name, message} ->
-            assert message == "TestMessageControllerRate_#{i}"
-        end
-      end
-
-      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 10)
-      MessageHandler.stop_listen_to_message_processes(self())
+      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 4010)
     end
 
     test "Controller sends an overloaded valid message and gets a 200 text reponse", %{conn: conn} do
-      MessageHandler.start_listen_to_message_processes(self())
       queue_name = Kernel.inspect(make_ref())
+      message = Kernel.inspect(make_ref())
+      monitor_ref = spawn_link(fn -> monitor_queue_processing(queue_name, [message]) end)
+      |> Process.monitor()
+
+      Process.sleep(100) # Give us some time to start the process link
       response =
         conn
         |> get(Routes.message_path(conn, :index, %{:queue => queue_name,
-                                                   :message => "TestMessageControllerOverload",
+                                                   :message => message,
                                                    :overload_param => "TestOverloadParam"}))
         |> text_response(200)
 
-      assert response == "Queue #{queue_name} Message TestMessageControllerOverload"
-      receive do
-        {:processing_message, ^queue_name, message} ->
-          assert message == "TestMessageControllerOverload"
-      end
+      assert response == "Queue #{queue_name} Message #{message}"
+      assert_receive({:DOWN, ^monitor_ref, _, _, _}, 10)
     end
 
     test "Controller is sent invalid messages and gets a 400 text reponse", %{conn: conn} do

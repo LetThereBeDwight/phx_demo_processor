@@ -3,26 +3,28 @@ ExUnit.start()
 defmodule PhxDemoProcessor.MonitorProcessHelper do
   import ExUnit.Assertions
 
-  def monitor_processing_rate(counts, last_processing_times \\ Map.new()) do
-    handler_pid = Process.whereis(PhxDemoProcessor.MessageHandler)
-    :erlang.trace(handler_pid, true, [:receive])
+  def monitor_queue_processing(queue_name, messages, last_processing_time \\ nil) do
+    PhxDemoProcessor.MessageHandler.start_listen_to_message_processes(self())
 
-    {counts, process_times} =
+    [expected_message | remaining] = messages
+    process_time =
       receive do
-        {:trace, ^handler_pid, :receive, {:process_queue, queue_name}} when :erlang.is_map_key(queue_name, counts) ->
+        {:processing_message, ^queue_name, message} ->
+          assert expected_message == message
           time = System.monotonic_time(:millisecond)
-          if Map.has_key?(last_processing_times, queue_name) do
-            assert time - Map.get(last_processing_times, queue_name) >= 1000
+          if last_processing_time do
+            # Should be 1000 but a microsecond difference could be reasonable
+            # via accounting errors
+            assert time - last_processing_time >= 999
           end
-
-          { Map.put(counts, queue_name, Map.get(counts, queue_name) - 1),
-            Map.put(last_processing_times, queue_name, time) }
+          time
       end
 
-    still_counting = Enum.reduce(counts, 0, fn {_k, v}, acc -> v + acc end)
-    if still_counting > 0 do
-      monitor_processing_rate(counts, process_times)
+    PhxDemoProcessor.MessageHandler.stop_listen_to_message_processes(self())
+    if List.first(remaining) do
+      monitor_queue_processing(queue_name, remaining, process_time)
     end
-  end
 
+    :ok
+  end
 end
